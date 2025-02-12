@@ -109,8 +109,8 @@ function handleEventClick(info: any) {
 
   useEffect(() => {
     const socket = io("http://localhost:4567", { transports: ["websocket"] });
-    socket.on("connect", () => console.log("Conectado ao WebSocket"));
-    socket.on("calendarEvents", (data: any) => {
+
+    const handleNewEvents = (data: any) => {
       if (Array.isArray(data)) {
         const mapped = data.map(mapEvent);
         setEvents((prevEvents: EventsEvent[]) => {
@@ -126,8 +126,15 @@ function handleEventClick(info: any) {
           return merged;
         });
       }
-    });
-    return () => socket.disconnect();
+    };
+
+    socket.on("connect", () => console.log("Conectado ao WebSocket"));
+    socket.on("calendarEvents", handleNewEvents);
+
+    return () => {
+      socket.off("calendarEvents", handleNewEvents);
+      socket.disconnect();
+    };
   }, []);
 
   return (
@@ -171,7 +178,7 @@ function handleEventClick(info: any) {
           />
         )}
 
-        <style jsx global>{`
+        <style>{`
           .fc-daygrid-day {
             height: 160px;
           }
@@ -193,7 +200,7 @@ function handleEventClick(info: any) {
           }
           .fc-daygrid-day-top {
             height: 1.3rem;
-            justify-content: left;
+            justify-content: right;
           }
 
           .fc-event.fc-event-start.fc-event-end.fc-event-past.fc-daygrid-event.fc-daygrid-dot-event {

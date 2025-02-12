@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -29,7 +30,7 @@ export function InitialFocus({
   onCloseProp,
   isOpenProp,
 }: {
-  event: CalendarEvent | undefined;
+  event?: CalendarEvent | undefined;
   date?: Date;
   onCloseProp: () => void;
   isOpenProp: boolean;
@@ -67,17 +68,19 @@ export function InitialFocus({
 
   function handleStartTimeChange(newStartTime: Date) {
     setStartTime(newStartTime);
+
     const newEndTime = new Date(newStartTime.getTime() + 60 * 60 * 1000);
     if (newEndTime > endTime) {
       setEndTime(newEndTime);
     }
   }
-
   function handleEndTimeChange(newEndTime: Date) {
-    setEndTime(newEndTime);
-    const minimumStartTime = new Date(newEndTime.getTime() - 60 * 60 * 1000);
-    if (minimumStartTime > startTime) {
-      setStartTime(minimumStartTime);
+    // Se o usuário tentar definir um horário de término antes de startTime + 1h, corrige automaticamente
+    const minimumEndTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+    if (newEndTime < minimumEndTime) {
+      setEndTime(minimumEndTime);
+    } else {
+      setEndTime(newEndTime);
     }
   }
 
@@ -105,15 +108,15 @@ export function InitialFocus({
         const eventId = event.id;
 
         const updatedStartTime =
-          startTime.toISOString() !== new Date(event.start).toISOString()
+          startTime.toISOString() !== new Date(event?.start || "").toISOString()
             ? combineDateAndTime(dateOnSave, startTime).toISOString()
-            : event.start;
+            : event?.start || new Date().toISOString();
 
         const updatedEndTime =
-          endTime.toISOString() !==
-          (event.end ? new Date(event.end).toISOString() : "")
+          endTime.toISOString() !== new Date(event?.end || "").toISOString()
             ? combineDateAndTime(dateOnSave, endTime).toISOString()
-            : event.end;
+            : event?.end ||
+              new Date(new Date().getTime() + 60 * 60 * 1000).toISOString();
 
         const updatedSummary =
           eventName !== event.title ? eventName : event.title;
@@ -201,7 +204,7 @@ export function InitialFocus({
         <ModalBody pb={6}>
           <FormControl isRequired>
             <FormLabel>Nome do evento</FormLabel>
-            <Input 
+            <Input
               required
               placeholder="Nome do evento"
               value={eventName}
@@ -232,7 +235,11 @@ export function InitialFocus({
                 <DateTime
                   value={startTime}
                   onChange={(momentObj) =>
-                    handleStartTimeChange(momentObj.toDate())
+                    handleStartTimeChange(
+                      momentObj instanceof Date
+                        ? momentObj
+                        : (momentObj as any).toDate()
+                    )
                   }
                   dateFormat={false}
                   timeFormat="HH:mm"
@@ -245,7 +252,11 @@ export function InitialFocus({
                 <DateTime
                   value={endTime}
                   onChange={(momentObj) =>
-                    handleEndTimeChange(momentObj.toDate())
+                    handleEndTimeChange(
+                      momentObj instanceof Date
+                        ? momentObj
+                        : (momentObj as any).toDate()
+                    )
                   }
                   dateFormat={false}
                   timeFormat="HH:mm"

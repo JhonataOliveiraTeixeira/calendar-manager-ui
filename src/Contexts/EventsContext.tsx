@@ -17,9 +17,9 @@ export interface EventsEvent {
 
 interface EventsContextProps {
   events: EventsEvent[];
-  setEvents: (events: EventsEvent[]) => void;
+  setEvents: React.Dispatch<React.SetStateAction<EventsEvent[]>>;
   clearEvents: () => void;
-  pushEvents:()=>  string | undefined
+  pushEvents: () => string | undefined;
 }
 
 const EventsContext = createContext<EventsContextProps | undefined>(

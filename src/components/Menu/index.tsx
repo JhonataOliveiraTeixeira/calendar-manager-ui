@@ -22,7 +22,7 @@ interface CalendarsProps {
 }
 
 interface ConnectionToGoogleResponse {
-  auth: {};
+  auth: object;
   calendarDatails: CalendarsProps[];
 }
 
