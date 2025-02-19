@@ -8,15 +8,25 @@ import interactionPlugin from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { InitialFocus } from "../Modal";
+import { AttendeesProps, InitialFocus } from "../Modal";
 import { EventsEvent, useEvents } from "../../Contexts/EventsContext";
+import { useCalendar } from "../../Contexts/CalendarContext";
 
 export interface CalendarEvent {
   id: string;
   title: string;
   start: string;
   end?: string;
-  extendedProps: any;
+  extendedProps: {
+    description: string;
+    colorId: string;
+    enableMeet?: boolean;
+    attendees?: [
+      {
+        email: string;
+      }
+    ];
+  };
 }
 
 export default function CalendarList() {
@@ -25,67 +35,99 @@ export default function CalendarList() {
   );
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { events, setEvents, pushEvents } = useEvents();
+  const { selectedCalendarId } = useCalendar();
 
-function handleDateClick(info: { date: Date }) {
-  const startDate = new Date(info.date);
-  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+  function handleDateClick(info: { date: Date }) {
+    const startDate = new Date(info.date);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
-  const date = {
-    id: "",
-    title: "",
-    start: startDate.toISOString(),
-    end: endDate.toISOString(),
-    extendedProps: {},
+    const date = {
+      id: "",
+      title: "",
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      extendedProps: {
+        description: "",
+        colorId: "",
+      },
+    };
+    setSelectedEvent(date);
+    onOpen();
+  }
+
+  function handleEventClick(info: any) {
+    console.log("Evento clicado:", info.event);
+
+    const event: CalendarEvent = {
+      id: info.event.id,
+      title: info.event.title,
+      start: info.event.start.toISOString(),
+      end: info.event.end?.toISOString() || info.event.start.toISOString(),
+      extendedProps: {
+        description: info.event.extendedProps?.description || "",
+        colorId: info.event.extendedProps?.colorId || "",
+        enableMeet: info.event.extendedProps?.enableMeet || false,
+        attendees: info.event.extendedProps?.attendees || [],
+      },
+    };
+
+    setSelectedEvent(event);
+    onOpen();
+  }
+
+  const renderEventContent = (eventInfo: EventContentArg) => {
+    
+    const storedCalendars = localStorage.getItem("calendars-list");
+    let calendarColor = "teal.400";
+    if (storedCalendars) {
+      const calendars = JSON.parse(storedCalendars);
+      const mechedCalendar = calendars.find(
+        (calendar: any) => calendar.id == selectedCalendarId
+      );
+      if (mechedCalendar) {
+        calendarColor = mechedCalendar.backgroundColor;
+      }
+    }
+
+    return (
+      <Flex
+        className="custom-event"
+        bg={calendarColor}
+        p={1}
+        borderRadius="md"
+        height={7}
+        width={"100%"}
+        maxW={"auto"}
+        justifyContent={"space-between"}
+        // _hover={{ bg: "teal.500" }}
+      >
+        <Text
+          isTruncated
+          width={"70%"}
+          fontSize={13}
+          as={"b"}
+          color={"gray.700"}
+        >
+          {eventInfo.event.title}
+        </Text>
+        <Text as={"b"} color={"gray.600"}>
+          {eventInfo.timeText}
+        </Text>
+      </Flex>
+    );
   };
-  setSelectedEvent(date);
-  console.log("Novo evento criado:", selectedEvent);
-  onOpen();
-}
-
-function handleEventClick(info: any) {
-  const event = {
-    id: info.event.id,
-    title: info.event.title,
-    start: info.event.start.toISOString(),
-    end: info.event.end?.toISOString() || info.event.start.toISOString(),
-    extendedProps: info.event.extendedProps,
-  };
-
-  setSelectedEvent(event);
-  onOpen();
-}
-
-
-  const renderEventContent = (eventInfo: EventContentArg) => (
-    <Flex
-      className="custom-event"
-      bg="teal.400"
-      p={1}
-      borderRadius="md"
-      height={7}
-      width={"100%"}
-      maxW={"auto"}
-      justifyContent={"space-between"}
-      _hover={{ bg: "teal.500" }}
-    >
-      <Text isTruncated width={"70%"} fontSize={13} as={"b"} color={"gray.700"}>
-        {eventInfo.event.title}
-      </Text>
-      <Text as={"b"} color={"gray.600"}>
-        {eventInfo.timeText}
-      </Text>
-    </Flex>
-  );
 
   function mapEvent(item: any): CalendarEvent {
-    console.log(item)
     return {
       id: item.id,
       title: item.summary,
       start: item.start?.dateTime || item.start?.date,
       end: item.end?.dateTime || item.end?.date,
       extendedProps: {
-        description: item.description,
+        description: item.description || "",
+        colorId: item.colorId || "",
+        enableMeet: item.conferenceData ? true : false,
+        attendees: item.attendees || [],
       },
     };
   }
@@ -94,7 +136,20 @@ function handleEventClick(info: any) {
     const storedEvents = pushEvents();
     if (storedEvents) {
       try {
-        setEvents(JSON.parse(storedEvents));
+        const parsedEvents = JSON.parse(storedEvents);
+        setEvents(parsedEvents);
+
+        const storedAttendees = parsedEvents.reduce(
+          (acc: any, event: CalendarEvent) => {
+            if (event.extendedProps?.attendees) {
+              acc[event.id] = event.extendedProps.attendees;
+            }
+            return acc;
+          },
+          {}
+        );
+
+        localStorage.setItem("eventAttendees", JSON.stringify(storedAttendees));
       } catch (error) {
         console.error("Erro ao carregar eventos do localStorage:", error);
       }
@@ -104,6 +159,21 @@ function handleEventClick(info: any) {
   useEffect(() => {
     if (events.length > 0) {
       localStorage.setItem("calendarEvents", JSON.stringify(events));
+
+      const attendeesData: Record<string, AttendeesProps[]> = events.reduce(
+        (acc, event) => {
+          if (
+            event.extendedProps?.attendees &&
+            Array.isArray(event.extendedProps.attendees)
+          ) {
+            acc[event.id] = event.extendedProps.attendees;
+          }
+          return acc;
+        },
+        {} as Record<string, AttendeesProps[]>
+      );
+
+      localStorage.setItem("eventAttendees", JSON.stringify(attendeesData));
     }
   }, [events]);
 

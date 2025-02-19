@@ -12,6 +12,16 @@ export interface EventsEvent {
   title: string;
   start: string;
   end?: string;
+  extendedProps: {
+    description: string;
+    colorId: string;
+    enableMeet?: boolean;
+    attendees?: [
+      {
+        email: string;
+      }
+    ];
+  };
 }
 
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -21,10 +22,10 @@ interface CalendarsProps {
   backgroundColor: string;
 }
 
-interface ConnectionToGoogleResponse {
-  auth: object;
-  calendarDatails: CalendarsProps[];
-}
+// interface ConnectionToGoogleResponse {
+//   auth: object;
+//   calendarDatails: CalendarsProps[];
+// }
 
 export function ConfigurationConection() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -32,7 +33,7 @@ export function ConfigurationConection() {
   const [syncOn, setSyncOn] = useState(false);
   const [calendars, setCalendars] = useState<CalendarsProps[]>([]);
   const { selectedCalendarId, setSelectedCalendarId } = useCalendar();
-  const {clearEvents} = useEvents()
+  const { clearEvents } = useEvents();
 
   useEffect(() => {
     const localAuth = localStorage.getItem("isAuthenticated-calendar@1.0");
@@ -45,7 +46,7 @@ export function ConfigurationConection() {
         const parsed = JSON.parse(storedCalendars);
         setCalendars(parsed);
         if (parsed.length > 0 && !selectedCalendarId) {
-          setSelectedCalendarId('primary');
+          setSelectedCalendarId("primary");
         }
       } catch (error) {
         console.error(error);
@@ -56,20 +57,34 @@ export function ConfigurationConection() {
   async function connectToGoogle() {
     try {
       setIsLoading(true);
-      const response = await axios.get("http://localhost:4567/events/login");
-      const { calendarDatails }: ConnectionToGoogleResponse =
-        response.data.response;
-      localStorage.setItem("calendars-list", JSON.stringify(calendarDatails));
-      setCalendars(calendarDatails);
-        setSelectedCalendarId('primary');
-      if (response.status === 200) {
-        setIsAuthenticated(true);
-        setSyncOn(true);
-        localStorage.setItem("isAuthenticated-calendar@1.0", "true");
-        localStorage.setItem("syncOn-calendar@1.0", "true");
-      } else {
-        setIsAuthenticated(false);
-        setSyncOn(false);
+
+      const tokens: any = await new Promise((resolve, reject) => {
+        function handleMessage(event: any) {
+          window.removeEventListener("message", handleMessage);
+          resolve(event.data);
+          if (!event) {
+            reject("Unresolved login");
+          }
+        }
+
+        window.addEventListener("message", handleMessage);
+
+        window.open("http://localhost:4567/events/login", "_blank");
+      });
+      if (tokens.tokens instanceof Object) {
+        console.log(tokens.calendarDetails);
+        Promise.all([
+          setCalendars(tokens.calendarDetails),
+          setSelectedCalendarId("primary"),
+          setIsAuthenticated(true),
+          setSyncOn(true),
+          localStorage.setItem(
+            "calendars-list",
+            JSON.stringify(tokens.calendarDetails)
+          ),
+          localStorage.setItem("isAuthenticated-calendar@1.0", "true"),
+          localStorage.setItem("syncOn-calendar@1.0", "true"),
+        ]);
       }
     } catch (error) {
       console.error(error);
@@ -103,11 +118,12 @@ export function ConfigurationConection() {
         setSyncOn(false);
         setSelectedCalendarId("");
         setCalendars([]);
+        localStorage.removeItem("eventAttendees");
         localStorage.removeItem("isAuthenticated-calendar@1.0");
         localStorage.removeItem("syncOn-calendar@1.0");
         localStorage.removeItem("calendars-list");
 
-        clearEvents()
+        clearEvents();
       }
     } catch (error) {
       console.error(error);
@@ -123,21 +139,18 @@ export function ConfigurationConection() {
   }
 
   async function handleUpdateCalendarId(calendarId: string) {
-      try{
-        const payload = {
-          calendarId
-        }
-       await axios.put(
-          `http://localhost:4567/events/update/calendarId/`,
-          payload
-        );
-
-        clearEvents()
-
-          } catch (error) {
-          console.error("Erro ao atualizar agenda:", error);
-        }
+    try {
+      const payload = {
+        calendarId,
+      };
+      await Promise.all([
+        axios.put(`http://localhost:4567/events/update/calendarId/`, payload),
+        clearEvents(),
+      ]);
+    } catch (error) {
+      console.error("Erro ao atualizar agenda:", error);
     }
+  }
 
   return (
     <Menu closeOnSelect={false}>
