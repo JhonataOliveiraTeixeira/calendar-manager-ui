@@ -161,10 +161,14 @@ export function ConfigurationConection() {
         color="white"
         background="teal.700"
         _hover={{ bg: "teal.800" }}
+        width={'5.5rem'}
+        height={'2.5rem'}
       >
         <Bolt />
       </MenuButton>
-      <MenuList>
+      <MenuList
+      width={'22rem'}
+      >
         {isAuthenticated && (
           <MenuItem>
             <Switch

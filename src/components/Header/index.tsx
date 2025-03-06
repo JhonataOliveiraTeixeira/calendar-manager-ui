@@ -1,23 +1,28 @@
  
-import {  Button, Flex, Image, useDisclosure} from "@chakra-ui/react";
+import { Button, Flex, Image, Text, useDisclosure } from "@chakra-ui/react";
 import logo from "../../assets/image.svg";
 import { ConfigurationConection } from "../Menu";
 import { InitialFocus } from "../Modal";
 import { useState } from "react";
 
 export function Header() {
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
     <div>
       <Flex
         background="teal.600"
         p={5}
+        gap={5}
         align="center"
         justifyContent="space-between"
+        width={"100%"}
       >
-        <Image src={logo} />
+        <Flex
+        justifyContent={'center'}>
+          <Image src={logo} />
+        </Flex>
 
         <Flex gap={4} align={"center"}>
           <ConfigurationConection />
@@ -29,8 +34,10 @@ export function Header() {
               setSelectedDate(new Date());
               onOpen();
             }}
+            width={"10rem"}
+            // height={'5rem'}
           >
-            Novo agendamento
+            <Text>Novo agendamento</Text>
           </Button>
         </Flex>
       </Flex>

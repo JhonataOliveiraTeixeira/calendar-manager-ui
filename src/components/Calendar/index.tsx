@@ -76,7 +76,6 @@ export default function CalendarList() {
   }
 
   const renderEventContent = (eventInfo: EventContentArg) => {
-    
     const storedCalendars = localStorage.getItem("calendars-list");
     let calendarColor = "teal.400";
     if (storedCalendars) {
@@ -181,6 +180,7 @@ export default function CalendarList() {
     const socket = io("http://localhost:4567", { transports: ["websocket"] });
 
     const handleNewEvents = (data: any) => {
+      console.log(data);
       if (Array.isArray(data)) {
         const mapped = data.map(mapEvent);
         setEvents((prevEvents: EventsEvent[]) => {
@@ -231,7 +231,7 @@ export default function CalendarList() {
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           dayMaxEventRows={4}
-          height="auto"
+          height="100%"
           contentHeight="auto"
         />
         {isOpen && (
@@ -250,6 +250,7 @@ export default function CalendarList() {
 
         <style>{`
           .fc-daygrid-day {
+            max-height: 160px;
             height: 160px;
           }
 
@@ -282,6 +283,16 @@ export default function CalendarList() {
             background-color: transparent;
             border-radius: 6px;
             cursor: pointer;
+          }
+            .fc {
+                display: flex;
+                flex-direction: column;
+                font-size: 1em;
+          }
+
+          .fc-direction-ltr { 
+              direction: ltr;
+              text-align: left;
           }
         `}</style>
       </Container>
